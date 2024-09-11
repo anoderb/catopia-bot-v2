@@ -2,6 +2,11 @@ const { default: axios } = require("axios");
 const { validateToken } = require("./CheckValidToken");
 const { getUserInfo } = require("./repo");
 
+function getCurrentTime() {
+  const now = new Date();
+  return now.toLocaleTimeString(); // Format waktu sesuai dengan format lokal
+}
+
 exports.buyPlant = async () => {
   const tokens = await validateToken();
   const listPlant = [
@@ -35,7 +40,7 @@ exports.buyPlant = async () => {
   for (const token of tokens) {
     const userInfo = await getUserInfo(token);
     if (!userInfo) {
-      console.log(`[ Error ] : cant get user info ${token.token}`);
+      console.log(`[ ${getCurrentTime()} ][ Error ] : cant get user info ${token.name} ${token.token}`);
       return;
     }
 
@@ -44,12 +49,12 @@ exports.buyPlant = async () => {
     const plant = choosePlant(listPlant, gold);
     if (!plant) {
       console.log(
-        `[ Error ] : cant choose plant GOLD: ${gold} UserId: ${userInfo.userId}`
+        `[ ${getCurrentTime()} ][ Error ] : cant choose plant GOLD: ${gold} UserId: ${userInfo.userId} name: ${token.name}`
       );
       return;
     }
     console.log(
-      `[ BOT ] : Plant:  ${plant.name}  GOLD: ${gold} UserId: ${userInfo.userId}`
+      `[ ${getCurrentTime()} ][ BOT ] : Plant:  ${plant.name}  GOLD: ${gold} UserId: ${userInfo.userId} name: ${token.name}`
     );
 
     try {
@@ -68,9 +73,9 @@ exports.buyPlant = async () => {
         }
       );
 
-      console.log(`[ Running ] : Buy plant ${plant.name}`);
+      console.log(`[ ${getCurrentTime()} ][ Running ] : ${token.name} Buy plant ${plant.name}`);
     } catch (error) {
-      console.log(`[ Error ] : cant buy plant ${error.message}`);
+      console.log(`[ ${getCurrentTime()} ][ Error ] : ${token.name} cant buy plant ${error.message}`);
     }
   }
 };

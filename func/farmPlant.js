@@ -3,6 +3,11 @@ const { validateToken } = require("./CheckValidToken");
 const { getLand, getPlantInfo, harvestPlant } = require("./repo");
 const { buyPlant } = require("./buyPlant");
 
+function getCurrentTime() {
+  const now = new Date();
+  return now.toTimeString().split(' ')[0];  // Format HH:MM:SS
+}
+
 exports.farmPlant = async () => {
   const tokens = await validateToken();
 
@@ -10,47 +15,62 @@ exports.farmPlant = async () => {
     const harvest = await harvestPlant(token);
 
     if (harvest?.gold) {
-      console.log(`[ Running ] : GOLD: ${harvest?.gold} Harvested from Land`);
-    } else {
-      console.log(harvest);
-    }
+      console.log(`[ ${getCurrentTime()} ][ Token ${token.name} ][ Running ] : GOLD: ${harvest.gold} Harvested from Land`);
 
-    const land = await getLand(token);
-    if (!land) {
-      console.log(`[ BOT ] : cant get land info ${token.token}`);
-    }
-    if (land.emptyLand.length == 0) {
-      console.log(`[ BOT ] : no empty land ${token.token}`);
-    }
-    const plant = await getPlantInfo(token);
-
-    if (!plant) {
-      console.log(`[ BOT ] : cant get plant info ${token.token}`);
-    }
-    if (plant.length < land.emptyLand.length) {
-      for (const buy of land.emptyLand) {
-        try {
-          await buyPlant();
-          console.log(`[ BOT ] : Buy Plant ...`);
-        } catch (error) {
-          console.log(error.message);
+      const land = await getLand(token);
+      if (!land) {
+        console.log(`[ ${getCurrentTime()} ][ Token ${token.name} ][ BOT ] : Can't get land info ${token.token}`);
+      } else if (land.emptyLand.length === 0) {
+        console.log(`[ ${getCurrentTime()} ][ Token ${token.name} ][ BOT ] : No empty land ${token.token}`);
+      } else {
+        const plant = await getPlantInfo(token);
+        if (!plant) {
+          console.log(`[ ${getCurrentTime()} ][ Token ${token.name} ][ BOT ] : Can't get plant info ${token.token}`);
+        } else if (plant.length < land.emptyLand.length) {
+          for (const buy of land.emptyLand) {
+            try {
+              await buyPlant();
+              console.log(`[ ${getCurrentTime()} ][ Token ${token.name} ][ BOT ] : Buy Plant ...`);
+            } catch (error) {
+              console.log(error.message);
+            }
+          }
         }
-      }
-    }
 
-    const checkUpdatePlant = await getPlantInfo(token);
+        const checkUpdatePlant = await getPlantInfo(token);
+        for (let i = 0; i < Math.min(land.emptyLand.length, 4); i++) {
+          const farm = land.emptyLand[i];
+          farm.checkUpdatePlant = checkUpdatePlant[i];
 
-    for (let i = 0; i < Math.min(land.emptyLand.length, 4); i++) {
-      const farm = land.emptyLand[i];
-      farm.checkUpdatePlant = checkUpdatePlant[i];
+          try {
+            await axios.post(
+              `https://api.catopia.io/api/v1/players/plant`,
+              {
+                plantId: checkUpdatePlant[i].id,
+                landId: farm.id,
+              },
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token.token}`,
+                },
+              }
+            );
 
-      try {
-        await axios.post(
-          `https://api.catopia.io/api/v1/players/plant`,
-          {
-            plantId: checkUpdatePlant[i].id,
-            landId: farm.id,
-          },
+            console.log(
+              `${checkUpdatePlant[i].id} planted to Land [ ${farm.id} ]`
+            );
+          } catch (error) {
+            console.log(error.message);
+          }
+        }
+
+        console.log(`[ ${getCurrentTime()} ][ Token ${token.name} ][ BOT ] : Wait 10 minutes for Growing...`);
+        await delay(10);
+
+        const nextHarvest = await axios.post(
+          "https://api.catopia.io/api/v1/players/plant/harvestAll",
+          {},
           {
             headers: {
               "Content-Type": "application/json",
@@ -58,31 +78,82 @@ exports.farmPlant = async () => {
             },
           }
         );
+
         console.log(
-          `${checkUpdatePlant[i].name} planted to Land [ ${farm.id} ]`
+          `[ ${getCurrentTime()} ][ Token ${token.name} ][ Running ] : GOLD: ${nextHarvest.data.data.gold} Harvested from Land`
         );
-        console.log(`[ BOT ] : Wait 10 minutes for Growing...`);
-      } catch (error) {
-        console.log(error.message);
+      }
+    } else {
+      console.log(`[ ${getCurrentTime()} ][ Token ${token.name} ][ BOT ] : No harvestable plants.`);
+      console.log(`[ ${getCurrentTime()} ][ Token ${token.name} ][ Running ] : GOLD: ${harvest.gold} Harvested from Land`);
+
+      const land = await getLand(token);
+      if (!land) {
+        console.log(`[ ${getCurrentTime()} ][ Token ${token.name} ][ BOT ] : Can't get land info ${token.token}`);
+      } else if (land.emptyLand.length === 0) {
+        console.log(`[ ${getCurrentTime()} ][ Token ${token.name} ][ BOT ] : No empty land ${token.token}`);
+      } else {
+        const plant = await getPlantInfo(token);
+        if (!plant) {
+          console.log(`[ ${getCurrentTime()} ][ Token ${token.name} ][ BOT ] : Can't get plant info ${token.token}`);
+        } else if (plant.length < land.emptyLand.length) {
+          for (const buy of land.emptyLand) {
+            try {
+              await buyPlant();
+              console.log(`[ ${getCurrentTime()} ][ Token ${token.name} ][ BOT ] : Buy Plant ...`);
+            } catch (error) {
+              console.log(error.message);
+            }
+          }
+        }
+
+        const checkUpdatePlant = await getPlantInfo(token);
+        for (let i = 0; i < Math.min(land.emptyLand.length, 4); i++) {
+          const farm = land.emptyLand[i];
+          farm.checkUpdatePlant = checkUpdatePlant[i];
+
+          try {
+            await axios.post(
+              `https://api.catopia.io/api/v1/players/plant`,
+              {
+                plantId: checkUpdatePlant[i].id,
+                landId: farm.id,
+              },
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token.token}`,
+                },
+              }
+            );
+
+            console.log(
+              `${checkUpdatePlant[i].id} planted to Land [ ${farm.id} ]`
+            );
+          } catch (error) {
+            console.log(error.message);
+          }
+        }
+
+        console.log(`[ ${getCurrentTime()} ][ Token ${token.name} ][ BOT ] : Wait 10 minutes for Growing...`);
+        await delay(10);
+
+        const nextHarvest = await axios.post(
+          "https://api.catopia.io/api/v1/players/plant/harvestAll",
+          {},
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token.token}`,
+            },
+          }
+        );
+
+        console.log(
+          `[ ${getCurrentTime()} ][ Token ${token.name} ][ Running ] : GOLD: ${nextHarvest.data.data.gold} Harvested from Land`
+        );
       }
     }
-    console.log(`[ BOT ] : Wait 10 minutes for Growing...`);
-    await delay(10);
-
-    const nextHarvest = await axios.post(
-      "https://api.catopia.io/api/v1/players/plant/harvestAll",
-      {},
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token.token}`,
-        },
-      }
-    );
-
-    console.log(
-      `[ Running ] : GOLD: ${nextHarvest.data.data.gold} Harvested from Land`
-    );
   }
 };
 

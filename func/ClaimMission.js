@@ -1,6 +1,12 @@
 const { default: axios } = require("axios");
 const { validateToken } = require("./CheckValidToken");
 
+function getCurrentTime() {
+  const now = new Date();
+  return now.toLocaleTimeString(); // Format waktu sesuai dengan format lokal
+}
+
+
 exports.claimMission = async () => {
   const tokens = await validateToken();
 
@@ -30,10 +36,10 @@ exports.claimMission = async () => {
               },
             }
           );
-          console.log(`[ Claimed ] : Mission ID ${claim.id} Claimed`);
+          console.log(`[ ${getCurrentTime()} ][ Claimed ] : ${token.name} Mission ID ${claim.id} Claimed`);
         }
       } else {
-        console.log(`[ Completed ] : No available mission to claim`);
+        console.log(`[ ${getCurrentTime()} ][ Completed ] : ${token.name} No available mission to claim`);
       }
     } catch (error) {
       console.log(error.message);
